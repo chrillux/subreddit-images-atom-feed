@@ -10,13 +10,15 @@ from feedgen.feed import FeedGenerator
 
 def lambda_handler(event, context):
 
-    feed = feedparser.parse("https://www.reddit.com/r/ProgrammerHumor.rss")
+    reddit_sub = os.environ['REDDIT_SUB']
+    feed = feedparser.parse(
+        "https://www.reddit.com/r/{}.rss".format(reddit_sub))
 
     fg = FeedGenerator()
-    fg.id('https://www.reddit.com/r/ProgrammerHumor')
-    fg.title('ProgrammerHumor with large images.')
-    fg.link(href='https://www.reddit.com/r/ProgrammerHumor')
-    fg.description('Reddit Progr>ammerHumor with large images.')
+    fg.id('https://www.reddit.com/r/{}'.format(reddit_sub))
+    fg.title('{} with large images.'.format(reddit_sub))
+    fg.link(href='https://www.reddit.com/r/{}'.format(reddit_sub))
+    fg.description('Reddit {} with large images.'.format(reddit_sub))
 
     headers = {'User-agent': 'Mozilla/5.0'}
 
@@ -46,11 +48,12 @@ def lambda_handler(event, context):
 
     s3 = boto3.resource("s3")
     s3.Bucket(os.environ['BUCKET_NAME']).put_object(
-        Key='index.html', Body=fg.atom_str(pretty=True))
+        Key='index.html',
+        Metadata={'Cache-Control': 'max-age=1800'}, Body=fg.atom_str(pretty=True))
 
     return {
         "statusCode": 200,
         "body": json.dumps({
-            "message": "Feed saved to S3 bucket.",
+            "message": "{} feed saved to S3 bucket.".format(reddit_sub),
         }),
     }

@@ -7,9 +7,13 @@ Globals:
   Function:
     Timeout: 30
 
-# Set this to your domain name, e.g example.com.
 Parameters:
+
+  # Set this to your domain name, e.g example.com.
   BucketName:
+    Type: String
+  # What is the name of the sub, e.g ProgrammerHumor
+  RedditSub:
     Type: String
 
 Resources:
@@ -22,6 +26,7 @@ Resources:
       Environment:
         Variables:
           BUCKET_NAME: !Ref SubredditImagesFeedS3Bucket
+          REDDIT_SUB: !Ref RedditSub
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref SubredditImagesFeedS3Bucket
