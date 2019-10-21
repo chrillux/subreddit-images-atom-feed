@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Reddit Subreddit images feed
+
+Globals:
+  Function:
+    Timeout: 30
+
+# Set this to your domain name, e.g example.com.
+Parameters:
+  BucketName:
+    Type: String
+
+Resources:
+  SubredditImagesFeedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: app.lambda_handler
+      Runtime: python3.6
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref SubredditImagesFeedS3Bucket
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref SubredditImagesFeedS3Bucket
+
+    DependsOn: SubredditImagesFeedS3Bucket
+
+  SubredditImagesFeedLambdaScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Run this lambda function on a schedule
+      ScheduleExpression: rate(30 minutes)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt SubredditImagesFeedFunction.Arn
+          Id: SubredditImagesFeedLambdaScheduleRule
+
+  SubredditImagesFeedLambdaSchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt SubredditImagesFeedFunction.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SubredditImagesFeedLambdaScheduleRule.Arn
+
+  SubredditImagesFeedS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      WebsiteConfiguration:
+        IndexDocument: index.html
+  SubredditImagesFeedS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BucketName
+      PolicyDocument:
+        Statement:
+        -
+          Action:
+            - s3:GetObject
+          Effect: Allow
+          Resource:
+            Fn::Join:
+              - ""
+              -
+                - "arn:aws:s3:::"
+                - !Ref BucketName
+                - "/*"
+          Principal: "*"
+          Condition:
+            IpAddress:
+              aws:SourceIp:
+                - "2400:cb00::/32"
+                - "2405:8100::/32"
+                - "2405:b500::/32"
+                - "2606:4700::/32"
+                - "2803:f800::/32"
+                - "2c0f:f248::/32"
+                - "2a06:98c0::/29"
+                - "103.21.244.0/22"
+                - "103.22.200.0/22"
+                - "103.31.4.0/22"
+                - "104.16.0.0/12"
+                - "108.162.192.0/18"
+                - "131.0.72.0/22"
+                - "141.101.64.0/18"
+                - "162.158.0.0/15"
+                - "172.64.0.0/13"
+                - "173.245.48.0/20"
+                - "188.114.96.0/20"
+                - "190.93.240.0/20"
+                - "197.234.240.0/22"
+                - "198.41.128.0/17"
+
+Outputs:
+  SubredditImagesFeedFunction:
+    Description: "Subreddit Lambda Function ARN"
+    Value: !GetAtt SubredditImagesFeedFunction.Arn
+  SubredditImagesFeedFunctionIamRole:
+    Description: "Implicit IAM Role created for Subreddit function"
+    Value: !GetAtt SubredditImagesFeedFunctionRole.Arn
+  SubredditImagesFeedFunctionWebsiteURL:
+    Description: "S3 Website URL"
+    Value: !GetAtt SubredditImagesFeedS3Bucket.WebsiteURL
+
