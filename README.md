@@ -20,6 +20,3 @@ This setup will basically cost nothing to run. Cloudflare should cache the site 
 * Deploy the application with AWS SAM.
 * Setup a CNAME on Cloudflare pointing at the website FQDN (See Cloudformation outputs key "SubredditImagesFeedFunctionWebsiteURL")
 
-## Todo
-
-Rewrite the HTTP requests to Reddit API to run asynchronously, the performance will be huge.

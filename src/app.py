@@ -1,15 +1,29 @@
+import asyncio
 import json
 import os
 
+import aiohttp
+import feedparser
 import requests
+from feedgen.feed import FeedGenerator
 
 import boto3
-import feedparser
-from feedgen.feed import FeedGenerator
 
 
 def lambda_handler(event, context):
 
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps({
+            "message": "Feed saved to S3 bucket.",
+        }),
+    }
+
+
+async def main():
     reddit_sub = os.environ['REDDIT_SUB']
     feed = feedparser.parse(
         "https://www.reddit.com/r/{}.rss".format(reddit_sub))
@@ -20,40 +34,38 @@ def lambda_handler(event, context):
     fg.link(href='https://www.reddit.com/r/{}'.format(reddit_sub))
     fg.description('Reddit {} with large images.'.format(reddit_sub))
 
-    headers = {'User-agent': 'Mozilla/5.0'}
-
-    for entry in feed.entries:
-        article_title = entry.title
-        article_link = entry.link
-        json_link = '{}/.json'.format(article_link)
-        json_data = requests.get(json_link, headers=headers).json()
-        post_data = json_data[0]['data']['children'][0]['data']
-        if not post_data['post_hint'] == 'image':
-            continue
-
-        image_fullsize_url = post_data['url']
-        imgsrc = '<img src="{}">'.format(image_fullsize_url)
-        author = post_data['author']
-        article_published_at = entry.updated
-
-        fe = fg.add_entry()
-
-        fe.id(article_link)
-        fe.link(href=article_link)
-        fe.pubDate(article_published_at)
-        fe.title(article_title)
-        fe.author({'name': author})
-        description = "{} <br/> {}".format(imgsrc, author)
-        fe.description(description)
+    async with aiohttp.ClientSession() as session:
+        coroutines = [fetch_entry_data(session, entry, fg)
+                      for entry in feed.entries]
+        completed, pending = await asyncio.wait(coroutines)
 
     s3 = boto3.resource("s3")
     s3.Bucket(os.environ['BUCKET_NAME']).put_object(
         Key='index.html',
         CacheControl='max-age=1800', Body=fg.atom_str(pretty=True))
 
-    return {
-        "statusCode": 200,
-        "body": json.dumps({
-            "message": "{} feed saved to S3 bucket.".format(reddit_sub),
-        }),
-    }
+
+async def fetch_entry_data(session, entry, fg):
+    article_title = entry.title
+    article_link = entry.link
+    json_link = '{}/.json'.format(article_link)
+    async with session.get(json_link, headers={'User-agent': 'Mozilla/5.0'}) as response:
+        json_data = await response.json()
+    post_data = json_data[0]['data']['children'][0]['data']
+    if not post_data['post_hint'] == 'image':
+        return
+
+    image_fullsize_url = post_data['url']
+    imgsrc = '<img src="{}">'.format(image_fullsize_url)
+    author = post_data['author']
+    article_published_at = entry.updated
+
+    fe = fg.add_entry()
+
+    fe.id(article_link)
+    fe.link(href=article_link)
+    fe.pubDate(article_published_at)
+    fe.title(article_title)
+    fe.author({'name': author})
+    description = "{} <br/> {}".format(imgsrc, author)
+    fe.description(description)
