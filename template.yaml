@@ -8,7 +8,6 @@ Globals:
     Timeout: 30
 
 Parameters:
-
   # Set this to your domain name, e.g example.com.
   BucketName:
     Type: String
@@ -30,7 +29,6 @@ Resources:
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref SubredditImagesFeedS3Bucket
-
     DependsOn: SubredditImagesFeedS3Bucket
 
   SubredditImagesFeedLambdaScheduleRule:
@@ -62,6 +60,7 @@ Resources:
         RestrictPublicBuckets: true
       WebsiteConfiguration:
         IndexDocument: index.html
+
   SubredditImagesFeedS3BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -83,6 +82,7 @@ Resources:
           Condition:
             IpAddress:
               aws:SourceIp:
+                # Cloudflare IP ranges: https://www.cloudflare.com/ips/
                 - "2400:cb00::/32"
                 - "2405:8100::/32"
                 - "2405:b500::/32"
