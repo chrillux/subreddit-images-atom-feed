@@ -49,7 +49,7 @@ def lambda_handler(event, context):
     s3 = boto3.resource("s3")
     s3.Bucket(os.environ['BUCKET_NAME']).put_object(
         Key='index.html',
-        Metadata={'Cache-Control': 'max-age=1800'}, Body=fg.atom_str(pretty=True))
+        CacheControl='max-age=1800', Body=fg.atom_str(pretty=True))
 
     return {
         "statusCode": 200,
