@@ -39,10 +39,29 @@ async def main():
                       for entry in feed.entries]
         completed, pending = await asyncio.wait(coroutines)
 
+    list_of_result = []
+    for complete_coroutine in completed:
+        list_of_result.append(complete_coroutine.result())
+    list_of_result.sort(key=lambda entry: entry['pubDate'])
+    add_entries_to_feed(fg, list_of_result)
+
     s3 = boto3.resource("s3")
     s3.Bucket(os.environ['BUCKET_NAME']).put_object(
         Key='index.html',
         CacheControl='max-age=1800', Body=fg.atom_str(pretty=True))
+
+
+def add_entries_to_feed(fg, list_of_result):
+
+    for result in list_of_result:
+        fe = fg.add_entry()
+
+        fe.id(result['id'])
+        fe.link(href=result['id'])
+        fe.pubDate(result['pubDate'])
+        fe.title(result['title'])
+        fe.author({'name': result['author']})
+        fe.description(result['description'])
 
 
 async def fetch_entry_data(session, entry, fg):
@@ -58,14 +77,14 @@ async def fetch_entry_data(session, entry, fg):
     image_fullsize_url = post_data['url']
     imgsrc = '<img src="{}">'.format(image_fullsize_url)
     author = post_data['author']
+    description = "{} <br/> {}".format(imgsrc, author)
     article_published_at = entry.updated
 
-    fe = fg.add_entry()
+    entry_data = {'id': article_link,
+                  'pubDate': article_published_at,
+                  'title': article_title,
+                  'author': author,
+                  'description': description,
+                  }
 
-    fe.id(article_link)
-    fe.link(href=article_link)
-    fe.pubDate(article_published_at)
-    fe.title(article_title)
-    fe.author({'name': author})
-    description = "{} <br/> {}".format(imgsrc, author)
-    fe.description(description)
+    return entry_data
