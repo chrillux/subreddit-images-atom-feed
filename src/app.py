@@ -4,7 +4,6 @@ import os
 
 import aiohttp
 import feedparser
-import requests
 from feedgen.feed import FeedGenerator
 
 import boto3
@@ -35,8 +34,9 @@ async def main():
     fg.description('Reddit {} with large images.'.format(reddit_sub))
 
     async with aiohttp.ClientSession() as session:
-        coroutines = [fetch_entry_data(session, entry, fg)
-                      for entry in feed.entries]
+        coroutines = [
+            fetch_entry_data(session, entry, fg) for entry in feed.entries
+        ]
         completed, pending = await asyncio.wait(coroutines)
 
     list_of_result = []
@@ -50,7 +50,9 @@ async def main():
     s3 = boto3.resource("s3")
     s3.Bucket(os.environ['BUCKET_NAME']).put_object(
         Key='index.html',
-        CacheControl='max-age=1800', Body=fg.atom_str(pretty=True))
+        CacheControl='max-age=1800',
+        ContentType="application/atom+xml",
+        Body=fg.atom_str(pretty=True))
 
 
 def add_entries_to_feed(fg, list_of_result):
@@ -70,7 +72,8 @@ async def fetch_entry_data(session, entry, fg):
     article_title = entry.title
     article_link = entry.link
     json_link = '{}/.json'.format(article_link)
-    async with session.get(json_link, headers={'User-agent': 'Mozilla/5.0'}) as response:
+    async with session.get(json_link, headers={'User-agent':
+                                               'Mozilla/5.0'}) as response:
         json_data = await response.json()
     post_data = json_data[0]['data']['children'][0]['data']
     if not post_data['post_hint'] == 'image':
@@ -82,11 +85,12 @@ async def fetch_entry_data(session, entry, fg):
     description = "{} <br/> {}".format(imgsrc, author)
     article_published_at = entry.updated
 
-    entry_data = {'id': article_link,
-                  'pubDate': article_published_at,
-                  'title': article_title,
-                  'author': author,
-                  'description': description,
-                  }
+    entry_data = {
+        'id': article_link,
+        'pubDate': article_published_at,
+        'title': article_title,
+        'author': author,
+        'description': description,
+    }
 
     return entry_data
