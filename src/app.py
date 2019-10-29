@@ -41,6 +41,8 @@ async def main():
 
     list_of_result = []
     for complete_coroutine in completed:
+        if complete_coroutine.result() is None:
+            continue
         list_of_result.append(complete_coroutine.result())
     list_of_result.sort(key=lambda entry: entry['pubDate'])
     add_entries_to_feed(fg, list_of_result)
