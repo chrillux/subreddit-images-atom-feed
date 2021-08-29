@@ -76,7 +76,7 @@ async def fetch_entry_data(session, entry, fg):
                                                'Mozilla/5.0'}) as response:
         json_data = await response.json()
     post_data = json_data[0]['data']['children'][0]['data']
-    if not post_data['post_hint'] == 'image':
+    if not post_data.get('post_hint') == 'image':
         return
 
     image_fullsize_url = post_data['url']
