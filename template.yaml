@@ -57,7 +57,7 @@ Resources:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        RestrictPublicBuckets: false
       WebsiteConfiguration:
         IndexDocument: index.html
 
