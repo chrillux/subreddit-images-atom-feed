@@ -21,7 +21,7 @@ Resources:
     Properties:
       CodeUri: src/
       Handler: app.lambda_handler
-      Runtime: python3.6
+      Runtime: python3.9
       Environment:
         Variables:
           BUCKET_NAME: !Ref SubredditImagesFeedS3Bucket
